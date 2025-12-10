@@ -1,0 +1,16 @@
+# Machine Shell Loader – xmrah Dev Mode v1
+# Görev: Tüm Machine Shell modüllerini tek noktadan yüklemek.
+
+# Sadece etkileşimli kabukta çalışsın
+[[ -o interactive ]] || return 0
+
+# Şu an DEV modundayız: modüller repo içindeki zsh klasöründe.
+# İleride install aşamasında bunu ~/.config/machine-shell'e çevireceğiz.
+export MACHINE_SHELL_DIR="${MACHINE_SHELL_DIR:-$HOME/machine-shell/zsh}"
+
+# Yükleme sırası önemli: önce çekirdek, sonra UX, sonra beyin/güvenlik/AI.
+for f in core.zsh prompt.zsh aliases.zsh telemetry.zsh safety.zsh fzf.zsh nav.zsh autosuggest.zsh ai.zsh highlight.zsh keybinds.zsh; do
+  if [[ -f "$MACHINE_SHELL_DIR/$f" ]]; then
+    source "$MACHINE_SHELL_DIR/$f"
+  fi
+done

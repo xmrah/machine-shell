@@ -1,0 +1,9 @@
+# Example configuration for machine-shell's AI agent.
+# Copy to config.toml and fill in your model and API settings.
+
+[model]
+# name = "gpt-4"  # Placeholder: set your preferred model name
+# endpoint = "https://api.example.com"  # Placeholder: configure API endpoint
+
+[auth]
+# api_key = "YOUR_API_KEY"  # Placeholder: insert credentials securely
