@@ -9,7 +9,7 @@
 export MACHINE_SHELL_DIR="${MACHINE_SHELL_DIR:-$HOME/machine-shell/zsh}"
 
 # Yükleme sırası önemli: önce çekirdek, sonra UX, sonra beyin/güvenlik/AI.
-for f in core.zsh prompt.zsh aliases.zsh telemetry.zsh safety.zsh fzf.zsh nav.zsh autosuggest.zsh ai.zsh highlight.zsh keybinds.zsh; do
+for f in core.zsh prompt.zsh dashboard.zsh aliases.zsh telemetry.zsh mode.zsh safety.zsh fzf.zsh nav.zsh autosuggest.zsh ai.zsh highlight.zsh analytics.zsh reflex.zsh keybinds.zsh; do
   if [[ -f "$MACHINE_SHELL_DIR/$f" ]]; then
     source "$MACHINE_SHELL_DIR/$f"
   fi

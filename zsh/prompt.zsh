@@ -1,18 +1,15 @@
-# Machine Shell – Prompt v1
-# P10k yok, gizli sihir yok. Tamamen okunabilir, senin kontrolünde.
+# Machine Shell – Minimal Prompt (Final Stable Version)
 
 autoload -Uz colors && colors
+setopt prompt_subst
 
-# Sol tarafta gözüken prompt’u hesaplayan fonksiyon
-machine_left_prompt() {
-  # %n = kullanıcı adı, %m = host (makine adı), %~ = kısaltılmış klasör yolu
+# Sol prompt (renkli)
+machine_header() {
   print -n "%{$fg[magenta]%}%n%{$reset_color%}@%{$fg[cyan]%}%m%{$reset_color%} %{$fg[yellow]%}%~%{$reset_color%}"
 }
 
-# İki satırlı prompt:
-# user@host ~
-# $
-PROMPT=$'\n$(machine_left_prompt)\n$ '
+# PROMPT → iki satır
+PROMPT=$'\n$(machine_header)\n# '
 
-# Sağ taraf (ileride HUD, saat, git info vs. için burayı kullanabiliriz)
+# Sağ prompt tamamen kapalı
 RPS1=""

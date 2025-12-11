@@ -1,74 +1,63 @@
-# Machine Shell – Safety v1
-# Görev: rm komutunu korumalı hale getirmek.
+# safety.zsh – Machine Shell Safety v2 (mode-aware)
 
-# Log klasörü (telemetry ile aynı path'i kullanıyoruz)
-: "${MACHINE_SHELL_LOG_DIR:=${XDG_DATA_HOME:-$HOME/.local/share}/machine-shell}"
-MACHINE_SHELL_SAFETY_LOG="$MACHINE_SHELL_LOG_DIR/safety.log"
+MS_HISTORY_FILE="${MS_HISTORY_FILE:-$HOME/.local/share/machine-shell/history.log}"
+MS_SAFETY_LOG="${MS_SAFETY_LOG:-$HOME/.local/share/machine-shell/safety.log}"
 
-mkdir -p "$MACHINE_SHELL_LOG_DIR"
+mkdir -p "$(dirname "$MS_SAFETY_LOG")"
 
-# Risk skorlayıcı: argümanlara bakıp 0–100 arası risk döndürür
-ms_risk_rm() {
-  local args="$*"
-  local score=0
-
-  # -rf varsa risk yüksek
-  if [[ "$args" == *"-rf"* ]]; then
-    (( score += 60 ))
-  fi
-
-  # root veya en üst seviye klasörler
-  if [[ "$args" == "/" || "$args" == "/*" || "$args" == "/home" || "$args" == "/home/"* ]]; then
-    (( score += 50 ))
-  fi
-
-  # * kullanımı (geniş silme)
-  if [[ "$args" == *" *"* ]]; then
-    (( score += 20 ))
-  fi
-
-  echo $score
+_ms_log_safety() {
+  local ts action cmd
+  ts=$(date --iso-8601=seconds)
+  action="$1"
+  cmd="$2"
+  echo "${ts}|${action}|${cmd}" >> "$MS_SAFETY_LOG"
 }
 
-# Orijinal /bin/rm yolu
-MS_RM_BIN="$(command -v rm)"
+_ms_is_dangerous_rm() {
+  # rm -rf varsa tehlikeli
+  [[ "$*" == *"-rf"* || "$*" == *"-fr"* ]]
+}
 
-# rm override
-rm() {
-  # Hiç argüman yoksa eski davranış
-  if [[ "$#" -eq 0 ]]; then
-    "$MS_RM_BIN"
+# rm override – mode-aware
+function rm() {
+  local level="${MS_SAFETY_LEVEL:-2}"
+  local cmd="rm $*"
+
+  # NUCLEAR → hiç karışma
+  if (( level <= 0 )); then
+    command rm "$@"
     return $?
   fi
 
-  local args=("$@")
-  local joined="$*"
-  local risk
-  risk=$(ms_risk_rm "$joined")
+  if _ms_is_dangerous_rm "$@"; then
+    # SAFE vs DEV davranışı
+    local target="$*"
 
-  # Düşük risk -> direkt çalıştır
-  if (( risk < 60 )); then
-    "$MS_RM_BIN" "${args[@]}"
+    # DEV mode: /tmp içindeyse sorunsuz çalıştır
+    if (( level == 2 )) && [[ "$target" == *"/tmp"* ]]; then
+      _ms_log_safety "ALLOWED_DEV_TMP" "$cmd"
+      command rm "$@"
+      return $?
+    fi
+
+    echo "⚠  MACHINE-SHELL SAFETY: Yüksek riskli rm tespit edildi."
+    echo "    Komut: $cmd"
+    echo "    Risk skoru: 60 / 100"
+
+    local ans
+    read -r "ans?    Gerçekten çalıştırmak istiyor musun? [y/N]: "
+
+    if [[ "$ans" != "y" && "$ans" != "Y" ]]; then
+      echo "    İptal edildi."
+      _ms_log_safety "BLOCKED" "$cmd"
+      return 1
+    fi
+
+    _ms_log_safety "ALLOWED" "$cmd"
+    command rm "$@"
     return $?
   fi
 
-  # Yüksek risk ise uyar
-  echo "⚠️  MACHINE-SHELL SAFETY: Yüksek riskli rm tespit edildi."
-  echo "    Komut: rm $joined"
-  echo "    Risk skoru: $risk / 100"
-  echo -n "    Gerçekten çalıştırmak istiyor musun? [y/N]: "
-
-  local answer
-  read answer
-
-  if [[ "$answer" != "y" && "$answer" != "Y" ]]; then
-    echo "❌ İşlem iptal edildi."
-    # Logla
-    printf '%s|BLOCKED|rm %s\n' "$(date +"%Y-%m-%dT%H:%M:%S")" "$joined" >> "$MACHINE_SHELL_SAFETY_LOG"
-    return 1
-  fi
-
-  # Onay verdin -> logla ve çalıştır
-  printf '%s|ALLOWED|rm %s\n' "$(date +"%Y-%m-%dT%H:%M:%S")" "$joined" >> "$MACHINE_SHELL_SAFETY_LOG"
-  "$MS_RM_BIN" "${args[@]}"
+  # Normal rm
+  command rm "$@"
 }
